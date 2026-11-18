@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crowd Monitoring Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #0f1115;
+    color: #e6e6e6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+  h1 {
+    margin: 0 0 16px;
+    font-size: 1.4rem;
+    letter-spacing: 0.02em;
+  }
+  .video-wrap {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    border: 1px solid #2a2e37;
+    max-width: 100%;
+    background: #000;
+  }
+  #video-feed {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  .status-panel {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    width: 100%;
+    max-width: 640px;
+  }
+  .card {
+    background: #1a1d24;
+    border: 1px solid #2a2e37;
+    border-radius: 10px;
+    padding: 12px 16px;
+    text-align: center;
+  }
+  .card .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9aa0ac;
+  }
+  .card .value {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .value.normal { color: #4ade80; }
+  .value.alert { color: #f87171; }
+  .value.on { color: #4ade80; }
+  .value.off { color: #facc15; }
+  #error-banner {
+    display: none;
+    margin-top: 16px;
+    max-width: 640px;
+    width: 100%;
+    background: #3a1717;
+    border: 1px solid #7f1d1d;
+    color: #fca5a5;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+  <h1>Crowd Monitoring Dashboard</h1>
+  <div class="video-wrap">
+    <img id="video-feed" src="/video_feed" alt="Live crowd detection feed">
+  </div>
+
+  <div class="status-panel">
+    <div class="card">
+      <div class="label">People Count</div>
+      <div class="value" id="people-count">--</div>
+    </div>
+    <div class="card">
+      <div class="label">Status</div>
+      <div class="value" id="crowd-status">--</div>
+    </div>
+    <div class="card">
+      <div class="label">Telegram Alerts</div>
+      <div class="value" id="alerts-status">--</div>
+    </div>
+    <div class="card">
+      <div class="label">Model</div>
+      <div class="value" id="model-status">--</div>
+    </div>
+  </div>
+
+  <div id="error-banner"></div>
+
+  <script>
+    async function refreshStatus() {
+      try {
+        const response = await fetch("/status", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+
+        document.getElementById("people-count").textContent = data.people_count;
+
+        const statusEl = document.getElementById("crowd-status");
+        statusEl.textContent = data.status_text;
+        statusEl.className = "value " + (data.crowd_detected ? "alert" : "normal");
+
+        const alertsEl = document.getElementById("alerts-status");
+        alertsEl.textContent = data.alerts_enabled ? "ON" : "OFF";
+        alertsEl.className = "value " + (data.alerts_enabled ? "on" : "off");
+
+        const modelEl = document.getElementById("model-status");
+        modelEl.textContent = data.model_ready ? "Ready" : "Loading...";
+
+        const errorBanner = document.getElementById("error-banner");
+        if (data.error) {
+          errorBanner.textContent = "Error: " + data.error;
+          errorBanner.style.display = "block";
+        } else {
+          errorBanner.style.display = "none";
+        }
+      } catch (err) {
+        // ignore transient network errors while the server warms up
+      }
+    }
+
+    refreshStatus();
+    setInterval(refreshStatus, 1000);
+  </script>
+</body>
+</html>
